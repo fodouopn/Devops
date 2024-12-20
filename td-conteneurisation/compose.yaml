@@ -1,0 +1,53 @@
+services:
+  frontend:
+    image: europe-west1-docker.pkg.dev/polytech-dijon/polytech-dijon/frontend-ffn-2024:nathanf
+    ports:
+      - "8080:8080"
+    depends_on:  # Assurez que backend, redis et rabbitmq sont prêts avant de démarrer le frontend
+      - backend
+      - redis
+      - rabbitmq
+    networks:
+      myapp-network:
+        aliases:
+          - api-service  # Alias ajouté pour que le frontend résolve correctement l'upstream "api-service"
+
+  backend:
+    image: europe-west1-docker.pkg.dev/polytech-dijon/polytech-dijon/backend-fn-2024:nathanf
+    ports:
+      - "5000:5000"
+    environment:
+      REDIS_HOST: redis-service  # Résolution correcte de Redis
+      RABBITMQ_HOST: rabbitmq-service  # Résolution correcte de RabbitMQ
+    depends_on:  
+      - redis
+      - rabbitmq
+    networks:
+      myapp-network:
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+     networks:
+      myapp-network:
+        aliases:
+          - redis-service  # Alias ajouté pour que le backend résolve correctement Redis
+    
+
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      myapp-network:
+        aliases:
+          - rabbitmq-service  
+networks:
+  myapp-network: {}
